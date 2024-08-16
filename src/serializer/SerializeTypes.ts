@@ -7,6 +7,11 @@ export class _SerializedArray {
     }
 }
 
+/**
+ * Can be used to define a class property as an Array in combination with Json.Prop
+ * @param type
+ * @constructor
+ */
 export function SerializedArray(type: PropType) {
     return new _SerializedArray(type);
 }
@@ -16,6 +21,11 @@ export class _SerializedObject {
     }
 }
 
+/**
+ * Can be used to define a class property as an Object in combination with Json.Prop.
+ * @param schema
+ * @constructor
+ */
 export function SerializedObject(schema: Record<string, PropType>) {
     return new _SerializedObject(schema);
 }
@@ -25,6 +35,11 @@ export class _SerializedClass {
     }
 }
 
+/**
+ * Can be used to define a class property as a class instance in combination with Json.Prop
+ * @param reference
+ * @constructor
+ */
 export function SerializedClass(reference: ClassType<any>) {
     return new _SerializedClass(reference);
 }

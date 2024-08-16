@@ -5,6 +5,7 @@ export class KeyAccessObjectMisMatch extends Error {
 }
 
 /**
+ * Resolves the given string representation to the property of 'obj'.
  * @param strRep - e.g. key1.key2.arrayKey[0].key3
  * @param obj - the object
  * @param prefix - internal used parameter for improved error message

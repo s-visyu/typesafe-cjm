@@ -8,7 +8,12 @@ import {
     PropTypeOption,
     PropTypeOptions
 } from "./SerializeTypes.ts";
-import {InvalidOptionsError, NotImplementedError, UnknownObjectTypeError} from "./SerializeErrors.ts";
+import {
+    CircularReferenceError,
+    InvalidOptionsError,
+    NotImplementedError,
+    UnknownObjectTypeError
+} from "./SerializeErrors.ts";
 import {readJSONValueByString} from "./objAccess.ts";
 
 const ConstructorDecorator = Symbol('ConstructorDecorator');
@@ -23,6 +28,11 @@ export class Json {
         return JSONDecorator
     }
 
+    /**
+     * Decorator to define a class property as JSON property.
+     * @param type
+     * @constructor
+     */
     static Prop(type: PropType) {
         return function (target: any, propertyKey: string) {
             if (!target[JSONDecorator])
@@ -38,10 +48,15 @@ export class Json {
         };
     }
 
+    /**
+     * Decorator for correct constructor call.
+     * Usage without parameters will provide the complete JSON as a single object in the constructor parameter.
+     * Usage with parameter def will look for the given complex property key in the json and provide it in the given order to the constructor.
+     * @param def - e.g. ['id', 'name', 'object.key1.key2', 'array[0][1][5]', 'object.array[0][1].key1.key2']
+     * @constructor
+     */
     static Constructor();
-
     static Constructor(def: string[]);
-
     static Constructor(def?: string[]) {
         return function (constructor: Function) {
             constructor[ConstructorDecorator] = def ?? true;
@@ -49,13 +64,18 @@ export class Json {
         }
     }
 
+    /**
+     * Serializes the given class into JSON.
+     * @param obj - JSON Class
+     * @param level - Internal param, used to limit depth
+     */
     public serialize(obj: any, level?: number): JSONValue {
         if (level === undefined
             || level === null)
             this.circularReferences = [];
 
         if (this.circularReferences.indexOf(obj) !== -1)
-            throw new Error(`Circular reference detected: ${obj}`);
+            throw new CircularReferenceError(`Circular reference detected: ${obj}`);
         this.circularReferences.push(obj);
 
         const serialized: JSONValue = {};
@@ -69,6 +89,12 @@ export class Json {
         return serialized;
     }
 
+    /**
+     * Deserializes the given JSON object into the class referenced by 'reference'.
+     * @param serialized - JSON object
+     * @param reference - The constructor of the class
+     * @param level - Internal param, used to limit the depth.
+     */
     public deserialize<T>(serialized: { [key: string]: JSONValue }, reference: ClassType<T>, level?: number): T {
         const instance = this.initClassReference(reference, serialized);
         const optionsMap = this.getOptions(instance);
@@ -82,6 +108,11 @@ export class Json {
         return instance;
     }
 
+    /**
+     * Returns the Json.Prop definitions.
+     * @param obj - Class instance
+     * @protected
+     */
     protected getOptions(obj: any): PropTypeOptions {
         const map = obj[this.decorator];
         if (!map)
@@ -89,10 +120,22 @@ export class Json {
         return map;
     }
 
+    /**
+     * Checks if any Json.Prop definition exists for the given class instance
+     * @param c - Class instance
+     * @protected
+     */
     protected hasSerializeProperty(c: InstanceType<any>): boolean {
         return !!c[this.decorator];
     }
 
+    /**
+     * Constructor params feature. Returns a valid class instance for the constructor 'ref'. It considers the
+     * Json.Constructor definitions.
+     * @param ref - Class constructor
+     * @param serialized - JSON object
+     * @protected
+     */
     protected initClassReference<T>(ref: ClassType<T>, serialized: Record<string, JSONValue>): T {
         let prototype = ref;
         let def: string[] | boolean = [];

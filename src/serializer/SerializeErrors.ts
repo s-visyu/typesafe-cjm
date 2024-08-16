@@ -25,3 +25,10 @@ export class NotImplementedError extends Error {
         this.name = 'NotImplementedError';
     }
 }
+
+export class CircularReferenceError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'CircularReferenceError';
+    }
+}
