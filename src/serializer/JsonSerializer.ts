@@ -14,10 +14,10 @@ import {
     NotImplementedError,
     UnknownObjectTypeError
 } from "./SerializeErrors.ts";
-import {readJSONValueByString} from "./objAccess.ts";
+import {readJSONValueByString} from "./ObjAccess.ts";
 
-const ConstructorDecorator = Symbol('ConstructorDecorator');
-const JSONDecorator = Symbol('JSONDecorator');
+export const ConstructorDecorator = Symbol('ConstructorDecorator');
+export const JSONDecorator = Symbol('JSONDecorator');
 
 export class Json {
 
@@ -69,7 +69,7 @@ export class Json {
      * @param obj - JSON Class
      * @param level - Internal param, used to limit depth
      */
-    public serialize(obj: any, level?: number): JSONValue {
+    public serialize(obj: any, level?: number): Record<string, JSONValue> {
         if (level === undefined
             || level === null)
             this.circularReferences = [];
@@ -187,7 +187,7 @@ export class Json {
             case 'string':
                 return value;
             case 'boolean':
-                return value ? 1 : 0;
+                return !!value;
             case 'dateTime':
                 return value.toString();
             default:

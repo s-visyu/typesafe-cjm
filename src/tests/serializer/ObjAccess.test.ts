@@ -1,4 +1,4 @@
-import {IncorrectKeyAccess, KeyAccessObjectMisMatch, readJSONValueByString} from "../../serializer/objAccess.ts";
+import {IncorrectKeyAccess, KeyAccessObjectMisMatch, readJSONValueByString} from "../../serializer/ObjAccess.ts";
 import {assert, describe, expect, test} from "vitest";
 
 describe('readJSONValueByString', () => {
