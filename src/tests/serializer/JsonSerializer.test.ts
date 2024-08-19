@@ -1,11 +1,12 @@
 import {assert, beforeEach, expect, test} from "vitest";
 import {Json} from "../../serializer/JsonSerializer.ts";
 import {SerializedArray, SerializedClass, SerializedObject} from "../../serializer/SerializeTypes.ts";
-import {CircularReferenceError} from "../../serializer/SerializeErrors.ts";
+import {CircularReferenceError, NotImplementedError, UnknownObjectTypeError} from "../../serializer/SerializeErrors.ts";
 
 export class TestUser {
     @Json.Prop("int") id: number = 0;
     @Json.Prop("string") name: string = '';
+    @Json.Prop("float") anyFloat: number = 0.205;
     @Json.Prop("boolean") isActive: boolean = false;
     @Json.Prop(SerializedArray("int")) numbers: number[] = [];
     @Json.Prop(SerializedArray("string")) strings: string[] = [];
@@ -16,6 +17,7 @@ export class TestUser {
 
     @Json.Prop(SerializedObject({
         id: "int",
+        anyFloat: "float",
         name: "string",
         isActive: "boolean",
         numbers: SerializedArray("int"),
@@ -47,29 +49,44 @@ beforeEach(() => {
     delete testUser1.objectTest.objectTest;
 })
 
-function checkSerializedTestUser(user: TestUser, serialized: any) {
+test('fn.serialize', () => {
+    const serialized = serializer.serialize(testUser1);
+
     expect(serialized).toBeTypeOf("object");
 
-    const objectTest = user.objectTest;
+    const objectTest = testUser1.objectTest;
     objectTest.createdAt = objectTest.createdAt.toString();
 
     expect(serialized).toMatchObject({
-        id: user.id,
-        name: user.name,
-        isActive: user.isActive,
-        numbers: user.numbers,
-        strings: user.strings,
-        booleans: user.booleans,
-        nestedNumbers: user.nestedNumbers,
-        multiNestedStrings: user.multiNestedStrings,
-        createdAt: user.createdAt.toString(),
-        objectTest: user.objectTest,
+        id: testUser1.id,
+        name: testUser1.name,
+        isActive: testUser1.isActive,
+        numbers: testUser1.numbers,
+        strings: testUser1.strings,
+        booleans: testUser1.booleans,
+        nestedNumbers: testUser1.nestedNumbers,
+        multiNestedStrings: testUser1.multiNestedStrings,
+        createdAt: testUser1.createdAt.toString(),
+        objectTest: testUser1.objectTest,
     })
-}
 
-test('fn.serialize', () => {
-    const serialized = serializer.serialize(testUser1);
-    checkSerializedTestUser(testUser1, serialized);
+    class UnknownPropSerialize {
+        @Json.Prop("unknown") unknown: string = "";
+    }
+
+    assert.throws(() => serializer.serialize(new UnknownPropSerialize()), NotImplementedError);
+    assert.throws(() => serializer.deserialize({unknown: "dkasd"}, UnknownPropSerialize), NotImplementedError);
+
+    class UnknownObjectSerialize {
+        @Json.Prop(SerializedObject({notAn: "boolean"})) notAnObject = {};
+    }
+
+    assert.throws(() => {
+        const a = new UnknownObjectSerialize();
+        a.notAnObject = "";
+        serializer.serialize(a)
+    }, UnknownObjectTypeError);
+    assert.throws(() => serializer.deserialize({notAnObject: ""}, UnknownObjectSerialize), UnknownObjectTypeError);
 });
 
 test('fn.deserialize', () => {
@@ -94,7 +111,7 @@ test('Extended classes', () => {
     const serialized = serializer.serialize(extendedUser);
     const deseriized = serializer.deserialize(serialized, ExtendedUser);
 
-    // ToDo
+    // ToDo createdAt
     deseriized.createdAt = extendedUser.createdAt;
     deseriized.objectTest.createdAt = extendedUser.createdAt;
 
@@ -133,8 +150,39 @@ test('Constructor params', () => {
     deserialized = serializer.deserialize(serialized, ComplexClass);
 
     expect(deserialized).toMatchObject(complexInstance)
-    // ToDO write test for extended classes
-    // ToDo write test for SerializedClass properties
+
+    // serialized class prop
+    class SerializedClassPropSimple {
+        @Json.Prop(SerializedClass(SimpleClass)) simpleClass: SimpleClass = new SimpleClass({id: 0});
+    }
+
+    const serializedClassPropSimple = new SerializedClassPropSimple();
+    serializedClassPropSimple.simpleClass.id = 100;
+    serialized = serializer.serialize(serializedClassPropSimple);
+    deserialized = serializer.deserialize(serialized, SerializedClassPropSimple);
+
+    expect(deserialized).toMatchObject(serializedClassPropSimple);
+
+    class SerializedClassPropComplex {
+        @Json.Prop(SerializedClass(ComplexClass)) complexClass: ComplexClass = new ComplexClass(0, "");
+    }
+
+    const serializedClassPropComplex = new SerializedClassPropComplex();
+    serializedClassPropComplex.complexClass.id = 100;
+    serializedClassPropComplex.complexClass.name = "DIjasid jaisj asd ";
+    serialized = serializer.serialize(serializedClassPropComplex);
+    deserialized = serializer.deserialize(serialized, SerializedClassPropComplex);
+
+    expect(deserialized).toMatchObject(serializedClassPropComplex);
+
+    // serialized class prop with any class
+    class SerializedClassPropOtherClass {
+        @Json.Prop(SerializedClass(Date)) date: Date = new Date();
+    }
+
+    const serializedClassPropOtherClass = new SerializedClassPropOtherClass();
+    assert.doesNotThrow(() => serialized = serializer.serialize(serializedClassPropOtherClass));
+    assert.doesNotThrow(() => deserialized = serializer.deserialize(serialized, SerializedClassPropOtherClass));
 });
 
 test('Circular references', () => {
@@ -172,5 +220,38 @@ test('Circular references', () => {
 });
 
 test('Max level', () => {
+    let lowLevelSerializer = new Json(1);
 
+    class ClassFail {
+        @Json.Prop(SerializedClass(ClassFail)) classOk: ClassFail;
+    }
+
+    const a = new ClassFail();
+    a.classOk = new ClassFail();
+
+    assert.throws(() => lowLevelSerializer.serialize(a), "Max levels reached for serialization");
+    assert.throws(() => lowLevelSerializer.deserialize({classOk: undefined}, ClassFail), "Max levels reached for deserialization");
+
+    lowLevelSerializer = new Json(2);
+
+    class ClassFail2 {
+        @Json.Prop(SerializedObject({
+            id: "int",
+            obj: SerializedObject({name: "string"})
+        })) someObj = {};
+    }
+
+    const b = new ClassFail2();
+    b.someObj = {
+        id: 500,
+        obj: {name: "Hello world"}
+    }
+
+    assert.throws(() => lowLevelSerializer.serialize(b), "Max levels reached for serialization")
+    assert.throws(() => lowLevelSerializer.deserialize({
+        someObj: {
+            id: 450,
+            obj: {name: "Hello world2"}
+        }
+    }, ClassFail2), "Max levels reached for deserialization")
 });

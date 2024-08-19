@@ -21,8 +21,12 @@ export const JSONDecorator = Symbol('JSONDecorator');
 
 export class Json {
 
-    static MAX_LEVELS = 256;
+    protected readonly MAX_LEVELS: number = 256;
     circularReferences: any[] = [];
+
+    constructor(maxLevels: number = 256) {
+        this.MAX_LEVELS = maxLevels - 1;
+    }
 
     protected get decorator(): symbol {
         return JSONDecorator
@@ -84,7 +88,11 @@ export class Json {
             const value = obj[key];
             const options = optionsMap[key];
             options.level = level || 0;
-            serialized[key] = this.serializeAny(value, options);
+            const s = this.serializeAny(value, options);
+            if (s !== undefined) {
+                // @ts-ignore
+                serialized[key] = s;
+            }
         }
         return serialized;
     }
@@ -102,8 +110,11 @@ export class Json {
             const value = serialized[key];
             const options = optionsMap[key];
             options.level = level || 0;
-            // @ts-ignore
-            instance[key] = this.deserializeAny(value, options);
+            const deserialized = this.deserializeAny(value, options);
+            if (deserialized !== undefined) {
+                // @ts-ignore
+                instance[key] = deserialized;
+            }
         }
         return instance;
     }
@@ -164,8 +175,8 @@ export class Json {
     }
 
     /* Serialization */
-    protected serializeAny(v: any, options: PropTypeOption): JSONValue {
-        if (options.level > Json.MAX_LEVELS)
+    protected serializeAny(v: any, options: PropTypeOption): JSONValue | undefined {
+        if (options.level > this.MAX_LEVELS)
             throw new Error(`Max levels reached for serialization`);
 
         if (options.type instanceof _SerializedArray)
@@ -195,7 +206,7 @@ export class Json {
         }
     }
 
-    protected serializeArray(value: any, options: PropTypeOption): JSONValue {
+    protected serializeArray(value: any, options: PropTypeOption): JSONValue | undefined {
         if (!(options.type instanceof _SerializedArray))
             throw new UnknownObjectTypeError(`Type ${options.type} is not an array, but is being used as one`);
 
@@ -222,14 +233,20 @@ export class Json {
         const serialized: JSONValue = {};
         for (const key in nextType.schema) {
             const propType = nextType.schema[key];
-            serialized[key] = this.serializeAny(value[key], {type: propType, key, level: options.level + 1});
+            const s = this.serializeAny(value[key], {type: propType, key, level: options.level + 1});
+            if (s !== undefined) {
+                serialized[key] = s;
+            }
         }
         return serialized;
     }
 
-    protected serializeClass(value: any, options: PropTypeOption): JSONValue {
+    protected serializeClass(value: any, options: PropTypeOption): JSONValue | undefined {
         if (!(options.type instanceof _SerializedClass))
             throw new UnknownObjectTypeError(`Type ${options.type} is not a class, but is being used as one`);
+
+        if (value === undefined)
+            return undefined;
 
         const classType = (options.type as _SerializedClass).reference;
         if (!(value instanceof classType))
@@ -243,7 +260,7 @@ export class Json {
 
     /* Deserialization */
     protected deserializeAny(value: JSONValue, options: PropTypeOption): any {
-        if (options.level > Json.MAX_LEVELS)
+        if (options.level + 1 > this.MAX_LEVELS)
             throw new Error(`Max levels reached for deserialization`);
 
         if (options.type instanceof _SerializedArray)
@@ -308,13 +325,17 @@ export class Json {
         return instance;
     }
 
-    protected deserializeClass(value: JSONValue, options: PropTypeOption): JSONValue {
+    protected deserializeClass(value: JSONValue, options: PropTypeOption): JSONValue | undefined {
         if (!(options.type instanceof _SerializedClass))
             throw new UnknownObjectTypeError(`Type ${options.type} is not a class, but is being used as one`);
 
+        if (value === undefined)
+            return undefined;
+
         const classType = (options.type as _SerializedClass).reference;
-        if (!this.hasSerializeProperty(new classType))
-            return new classType(value);
+        const newClassType = this.initClassReference(classType, value)
+        if (!this.hasSerializeProperty(newClassType))
+            return newClassType;
 
         return this.deserialize(value, classType, options.level + 1);
     }
