@@ -1,8 +1,12 @@
 {
   "name": "json-class",
-  "private": true,
-  "version": "0.0.0",
+  "private": false,
+  "version": "1.0",
   "type": "module",
+  "author": {
+    "name": "Sascha Schweitzer",
+    "email": "sascha.schweitzer@posteo.de"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
