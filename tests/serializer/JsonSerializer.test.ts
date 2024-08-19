@@ -1,7 +1,11 @@
 import {assert, beforeEach, expect, test} from "vitest";
-import {Json} from "../../serializer/JsonSerializer.ts";
-import {SerializedArray, SerializedClass, SerializedObject} from "../../serializer/SerializeTypes.ts";
-import {CircularReferenceError, NotImplementedError, UnknownObjectTypeError} from "../../serializer/SerializeErrors.ts";
+import {Json} from "../../src/serializer/JsonSerializer.ts";
+import {SerializedArray, SerializedClass, SerializedObject} from "../../src/serializer/SerializeTypes.ts";
+import {
+    CircularReferenceError,
+    NotImplementedError,
+    UnknownObjectTypeError
+} from "../../src/serializer/SerializeErrors.ts";
 
 export class TestUser {
     @Json.Prop("int") id: number = 0;
