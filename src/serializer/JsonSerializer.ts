@@ -59,10 +59,11 @@ export class Json {
      * @param def - e.g. ['id', 'name', 'object.key1.key2', 'array[0][1][5]', 'object.array[0][1].key1.key2']
      * @constructor
      */
-    static Constructor();
-    static Constructor(def: string[]);
+    static Constructor(): Function;
+    static Constructor(def: string[]): Function;
     static Constructor(def?: string[]) {
         return function (constructor: Function) {
+            // @ts-ignore
             constructor[ConstructorDecorator] = def ?? true;
             return constructor;
         }
@@ -152,6 +153,7 @@ export class Json {
         let def: string[] | boolean = [];
         while (prototype) {
             if (Object.hasOwn(prototype, ConstructorDecorator)) {
+                // @ts-ignore
                 def = prototype[ConstructorDecorator];
                 break;
             }
@@ -218,7 +220,7 @@ export class Json {
             type: nextType.type,
             key: options.key,
             level: options.level + 1
-        }));
+        })).filter(v => v !== undefined);
     }
 
     protected serializeObject(value: any, options: PropTypeOption): Record<string, JSONValue> {
@@ -333,10 +335,10 @@ export class Json {
             return undefined;
 
         const classType = (options.type as _SerializedClass).reference;
-        const newClassType = this.initClassReference(classType, value)
+        const newClassType = this.initClassReference(classType, value as Record<string, JSONValue>) // ToDo type check
         if (!this.hasSerializeProperty(newClassType))
             return newClassType;
 
-        return this.deserialize(value, classType, options.level + 1);
+        return this.deserialize(value as Record<string, JSONValue>, classType, options.level + 1); // ToDo type check
     }
 }

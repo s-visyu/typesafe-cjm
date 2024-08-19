@@ -1,12 +1,34 @@
 {
-  "name": "json-class",
+  "name": "typesafe-cjm",
   "private": false,
   "version": "1.0",
   "type": "module",
+  "source": "src/index.ts",
+  "module": "dist/json-class.js",
   "author": {
     "name": "Sascha Schweitzer",
     "email": "sascha.schweitzer@posteo.de"
   },
+  "repository": {
+    "type": "git",
+    "url": "ToDo"
+  },
+  "bugs": {
+    "url": "ToDo"
+  },
+  "homepage": "ToDo",
+  "keywords": [
+    "json",
+    "serialization",
+    "deserialization",
+    "runtime",
+    "type-safe",
+    "class-transformer",
+    "object-mapping",
+    "type-validation",
+    "data-serialization"
+  ],
+
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

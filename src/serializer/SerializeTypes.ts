@@ -1,5 +1,3 @@
-import {PropType} from "./JsonSerializer.ts";
-
 export type ClassType<T> = new (...args: any[]) => T;
 
 export class _SerializedArray {
