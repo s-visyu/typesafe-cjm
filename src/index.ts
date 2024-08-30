@@ -3,8 +3,8 @@ import {IncorrectKeyAccess, KeyAccessObjectMisMatch} from "./serializer/ObjAcces
 import {
     CircularReferenceError,
     InvalidOptionsError,
-    MissingRequiredPropertyError,
     NotImplementedError,
+    PropertyRequiredError,
     UnknownObjectTypeError
 } from "./serializer/SerializeErrors.ts";
 import {PropType, SerializedArray, SerializedClass, SerializedObject} from "./serializer/SerializeTypes.ts";
@@ -21,7 +21,7 @@ export {
     InvalidOptionsError,
     NotImplementedError,
     UnknownObjectTypeError,
-    MissingRequiredPropertyError
+    PropertyRequiredError
 };
 
 export type {PropType};

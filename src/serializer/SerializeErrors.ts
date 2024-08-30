@@ -12,13 +12,6 @@ export class UnknownObjectTypeError extends Error {
     }
 }
 
-export class MissingRequiredPropertyError extends Error {
-    constructor(message: string) {
-        super(message);
-        this.name = 'MissingRequiredPropertyError';
-    }
-}
-
 export class NotImplementedError extends Error {
     constructor(message: string) {
         super(message);
