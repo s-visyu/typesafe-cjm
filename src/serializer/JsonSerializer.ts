@@ -12,6 +12,7 @@ import {
     CircularReferenceError,
     InvalidOptionsError,
     NotImplementedError,
+    PropertyRequiredError,
     UnknownObjectTypeError
 } from "./SerializeErrors.ts";
 import {readJSONValueByString} from "./ObjAccess.ts";
@@ -35,9 +36,10 @@ export class Json {
     /**
      * Decorator to define a class property as JSON property.
      * @param type
+     * @param required
      * @constructor
      */
-    static Prop(type: PropType) {
+    static Prop(type: PropType, required = false) {
         return function (target: any, propertyKey: string) {
             if (!target[JSONDecorator])
                 target[JSONDecorator] = {};
@@ -46,6 +48,7 @@ export class Json {
                 ...target[JSONDecorator],
                 [propertyKey]: {
                     type,
+                    required,
                     key: propertyKey,
                 }
             } as PropTypeOptions;
@@ -181,6 +184,12 @@ export class Json {
         if (options.level > this.MAX_LEVELS)
             throw new Error(`Max levels reached for serialization`);
 
+        if (v === undefined)
+            if (options.required)
+                throw new PropertyRequiredError(`Required prop '${options.key}' is not set`);
+            else
+                return undefined;
+
         if (options.type instanceof _SerializedArray)
             return this.serializeArray(v, options);
         else if (options.type instanceof _SerializedObject)
@@ -219,7 +228,8 @@ export class Json {
         return value.map((v: any) => this.serializeAny(v, {
             type: nextType.type,
             key: options.key,
-            level: options.level + 1
+            level: options.level + 1,
+            required: options.required
         })).filter(v => v !== undefined);
     }
 
@@ -235,7 +245,12 @@ export class Json {
         const serialized: JSONValue = {};
         for (const key in nextType.schema) {
             const propType = nextType.schema[key];
-            const s = this.serializeAny(value[key], {type: propType, key, level: options.level + 1});
+            const s = this.serializeAny(value[key], {
+                type: propType,
+                key,
+                level: options.level + 1,
+                required: true
+            });
             if (s !== undefined) {
                 serialized[key] = s;
             }
@@ -264,6 +279,12 @@ export class Json {
     protected deserializeAny(value: JSONValue, options: PropTypeOption): any {
         if (options.level + 1 > this.MAX_LEVELS)
             throw new Error(`Max levels reached for deserialization`);
+
+        if (value === undefined)
+            if (options.required)
+                throw new PropertyRequiredError(`Required prop '${options.key}' is not set`);
+            else
+                return undefined;
 
         if (options.type instanceof _SerializedArray)
             return this.deserializeArray(value, options);
@@ -306,8 +327,9 @@ export class Json {
         return value.map((v: any) => this.deserializeAny(v, {
             type: nextType.type,
             key: options.key,
-            level: options.level + 1
-        }));
+            level: options.level + 1,
+            required: options.required
+        })).filter(v => v !== undefined);
     }
 
     protected deserializeObject(value: JSONValue, options: PropTypeOption): JSONValue {
@@ -322,7 +344,9 @@ export class Json {
         const instance: any = {};
         for (const key in nextType.schema) {
             const propType = nextType.schema[key];
-            instance[key] = this.deserializeAny(value[key], {type: propType, key, level: options.level + 1});
+            const v = this.deserializeAny(value[key], {type: propType, key, level: options.level + 1, required: true}); // ToDo change required?
+            if (v !== undefined)
+                instance[key] = v;
         }
         return instance;
     }

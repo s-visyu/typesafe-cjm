@@ -259,3 +259,70 @@ test('Max level', () => {
         }
     }, ClassFail2), "Max levels reached for deserialization")
 });
+
+test('Required', () => {
+    class AnyClass {
+        @Json.Prop("int") id?: number;
+        @Json.Prop("string") name?: string;
+    }
+
+    class RequiredClass {
+        @Json.Prop("int", true) id?: number;
+        @Json.Prop("string", true) name: string = "";
+    }
+
+    class ExtendedRequiredClass extends RequiredClass {
+        @Json.Prop("int", true) extendedID?: number;
+        @Json.Prop(SerializedArray("int"), true) numbers?: number[];
+        @Json.Prop(SerializedObject({a: "int", numbers: SerializedArray("int")}), true) object?: any;
+        @Json.Prop(SerializedClass(AnyClass), true) required: AnyClass;
+
+        @Json.Prop("string") ok?: string;
+        @Json.Prop("int") ok2?: number;
+        @Json.Prop(SerializedClass(RequiredClass), false) ok3?: RequiredClass;
+    }
+
+    const a = new RequiredClass();
+    assert.throws(() => serializer.serialize(a), "Required prop 'id' is not set");
+    assert.throws(() => serializer.deserialize({name: "Hello"}, RequiredClass), "Required prop 'id' is not set");
+    assert.throws(() => serializer.deserialize({id: 100}, RequiredClass), "Required prop 'name' is not set");
+    assert.doesNotThrow(() => serializer.deserialize({id: 100, name: "Hello"}, RequiredClass));
+
+    const b = new ExtendedRequiredClass();
+    b.id = 100;
+    assert.throws(() => serializer.serialize(b), "Required prop 'extendedID' is not set");
+    b.extendedID = 50;
+    assert.throws(() => serializer.serialize(b), "Required prop 'numbers' is not set");
+    b.numbers = [1, 2, 3];
+    assert.throws(() => serializer.serialize(b), "Required prop 'object' is not set");
+    b.object = {a: 100, numbers: [1, 2, 3]};
+    assert.throws(() => serializer.serialize(b), "Required prop 'required' is not set");
+    b.required = new AnyClass();
+    assert.doesNotThrow(() => serializer.serialize(b));
+
+    assert.throws(() => serializer.deserialize({
+        name: "Hello",
+        extendedID: 100
+    }, ExtendedRequiredClass), "Required prop 'id' is not set");
+    assert.throws(() => serializer.deserialize({
+        id: 100,
+        name: "Hello"
+    }, ExtendedRequiredClass), "Required prop 'extendedID' is not set");
+    assert.throws(() => serializer.deserialize({
+        id: 100,
+        extendedID: 100
+    }, ExtendedRequiredClass), "Required prop 'name' is not set");
+    assert.throws(() => serializer.deserialize({
+        id: 100,
+        name: "Hello",
+        extendedID: 100
+    }, ExtendedRequiredClass), "Required prop 'numbers' is not set");
+    assert.doesNotThrow(() => serializer.deserialize({
+        id: 100,
+        name: "Hello",
+        extendedID: 100,
+        numbers: [1, 2, 3],
+        object: {a: 100, numbers: [1, 2, 3]},
+        required: {id: 100}
+    }, ExtendedRequiredClass));
+})

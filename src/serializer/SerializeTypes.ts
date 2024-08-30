@@ -56,6 +56,7 @@ export type PropTypeOption = {
     type: PropType
     key: string
     level: number
+    required: boolean
 }
 export type PropTypeOptions = PropTypeOption[];
 
