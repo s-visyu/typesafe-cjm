@@ -2,7 +2,6 @@
   "name": "typesafe-cjm",
   "private": false,
   "version": "1.0.0",
-  "type": "module",
   "source": "src/index.ts",
   "module": "dist/json-class.js",
   "author": {
@@ -16,6 +15,7 @@
   "bugs": {
     "url": "ToDo"
   },
+  "license": "MIT",
   "homepage": "ToDo",
   "keywords": [
     "json",
